@@ -1,0 +1,82 @@
+# Nginx Build Image
+FROM balenalib/generic-aarch64-debian as nginxbuild
+
+RUN apt-get update
+RUN apt-get install libpcre3-dev libssl-dev zlib1g-dev wget build-essential
+
+WORKDIR /tmp
+RUN wget "http://nginx.org/download/nginx-1.15.7.tar.gz"
+RUN tar xzf nginx-1.15.7.tar.gz
+WORKDIR /tmp/nginx-1.15.7
+
+RUN ./configure \
+    --prefix=/etc/nginx \
+    --sbin-path=/usr/sbin/nginx \
+    --modules-path=/usr/lib/nginx/modules \
+    --conf-path=/etc/nginx/nginx.conf \
+    --error-log-path=/var/log/nginx/error.log \
+    --http-log-path=/var/log/nginx/access.log \
+    --pid-path=/var/run/nginx.pid \
+    --lock-path=/var/run/nginx.lock \
+    --http-client-body-temp-path=/var/cache/nginx/client_temp \
+    --http-proxy-temp-path=/var/cache/nginx/proxy_temp \
+    --http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp \
+    --http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp \
+    --http-scgi-temp-path=/var/cache/nginx/scgi_temp \
+    --user=nginx \
+    --group=nginx \
+    --with-compat \
+    --with-file-aio \
+    --with-threads \
+    --with-http_addition_module \
+    --with-http_auth_request_module \
+    --with-http_dav_module \
+    --with-http_flv_module \
+    --with-http_gunzip_module \
+    --with-http_gzip_static_module \
+    --with-http_mp4_module \
+    --with-http_random_index_module \
+    --with-http_realip_module \
+    --with-http_secure_link_module \
+    --with-http_slice_module \
+    --with-http_ssl_module \
+    --with-http_stub_status_module \
+    --with-http_sub_module \
+    --with-http_v2_module \
+    --with-mail \
+    --with-mail_ssl_module \
+    --with-stream \
+    --with-stream_realip_module \
+    --with-stream_ssl_module \
+    --with-stream_ssl_preread_module
+
+RUN make
+
+
+# Final Image
+FROM balenalib/generic-aarch64-debian
+
+MAINTAINER Jamie Curnow <jc@jc21.com>
+LABEL maintainer="Jamie Curnow <jc@jc21.com>"
+
+# Nodejs and other packages
+RUN apt-get update \
+  && apt-get install rsync ca-certificates gnupg openssl dirmngr python make g++ git build-essential apache2-utils letsencrypt inetutils-ping \
+  && cd /tmp \
+  && curl -L -o /tmp/node.tar.xz "https://nodejs.org/dist/v10.15.1/node-v10.15.1-linux-arm64.tar.xz" \
+  && xz -d /tmp/node.tar.xz \
+  && tar xf /tmp/node.tar \
+  && rsync -avh /tmp/node-v10.15.1-linux-arm64/ / \
+  && rm -rf /tmp/node* \
+  && apt-get clean \
+  && npm install --global yarn gulp \
+  && yarn config set unsafe-perm true
+
+# Copy nginx build from first image
+COPY --from=nginxbuild /tmp/nginx-1.15.7 /tmp/nginx-1.15.7
+WORKDIR /tmp/nginx-1.15.7
+RUN make install \
+    && rm -rf /tmp/nginx-1.15.7
+
+WORKDIR /
+
