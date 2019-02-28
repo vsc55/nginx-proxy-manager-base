@@ -1,5 +1,5 @@
 # Nginx Build Image
-FROM balenalib/raspberry-pi2-debian as nginxbuild
+FROM balenalib/raspberry-pi-debian as nginxbuild
 
 RUN apt-get update
 RUN apt-get install libpcre3-dev libssl-dev zlib1g-dev wget build-essential
@@ -54,7 +54,7 @@ RUN make
 
 
 # Final Image
-FROM balenalib/raspberry-pi2-debian
+FROM balenalib/raspberry-pi-debian
 
 MAINTAINER Jamie Curnow <jc@jc21.com>
 LABEL maintainer="Jamie Curnow <jc@jc21.com>"
