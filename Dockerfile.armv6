@@ -66,7 +66,7 @@ RUN apt-get update \
   && curl -L -o /tmp/node.tar.xz "https://nodejs.org/dist/v10.15.1/node-v10.15.1-linux-armv6l.tar.xz" \
   && xz -d /tmp/node.tar.xz \
   && tar xf /tmp/node.tar \
-  && rsync -avh /tmp/node-v10.15.1-linux-arm6l/ / \
+  && rsync -avh /tmp/node-v10.15.1-linux-armv6l/ / \
   && rm -rf /tmp/node* \
   && apt-get clean \
   && npm install --global yarn gulp \
