@@ -9,6 +9,7 @@ pipeline {
     TEMP_IMAGE       = "nginx-proxy-manager-base-build_${BUILD_NUMBER}"
     TEMP_IMAGE_ARM   = "nginx-proxy-manager-base-arm-build_${BUILD_NUMBER}"
     TEMP_IMAGE_ARM64 = "nginx-proxy-manager-base-arm64-build_${BUILD_NUMBER}"
+    TEMP_IMAGE_ARMV6 = "nginx-proxy-manager-base-armv6-build_${BUILD_NUMBER}"
   }
   stages {
     stage('Build') {
@@ -62,6 +63,24 @@ pipeline {
             }
 
             sh 'docker rmi $TEMP_IMAGE_ARM64'
+          }
+        }
+        stage('armv6') {
+          agent {
+            label 'armv6'
+          }
+          steps {
+            sh 'docker build --pull --no-cache --squash --compress -f Dockerfile.armv6 -t $TEMP_IMAGE_ARMV6 .'
+            sh 'docker tag $TEMP_IMAGE_ARMV6 $DOCKER_PRIVATE_REGISTRY/$IMAGE:armv6'
+            sh 'docker push $DOCKER_PRIVATE_REGISTRY/$IMAGE:armv6'
+            sh 'docker tag $TEMP_IMAGE_ARMV6 docker.io/jc21/$IMAGE:armv6'
+
+            withCredentials([usernamePassword(credentialsId: 'jc21-dockerhub', passwordVariable: 'dpass', usernameVariable: 'duser')]) {
+              sh "docker login -u '${duser}' -p '$dpass'"
+              sh 'docker push docker.io/jc21/$IMAGE:armv6'
+            }
+
+            sh 'docker rmi $TEMP_IMAGE_ARMV6'
           }
         }
       }
