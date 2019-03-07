@@ -144,11 +144,11 @@ pipeline {
       }
       steps {
         ansiColor('xterm') {
-          sh 'docker rmi jc21/${IMAGE}:latest'
-          sh 'docker rmi jc21/${IMAGE}:latest-${AMD64_TAG}'
-          sh 'docker rmi jc21/${IMAGE}:latest-${ARM64_TAG}'
-          sh 'docker rmi jc21/${IMAGE}:latest-${ARMV7_TAG}'
-          sh 'docker rmi jc21/${IMAGE}:latest-${ARMV6_TAG}'
+          sh 'docker rmi jc21/${IMAGE}:latest || echo ""'
+          sh 'docker rmi jc21/${IMAGE}:latest-${AMD64_TAG} || echo ""'
+          sh 'docker rmi jc21/${IMAGE}:latest-${ARM64_TAG} || echo ""'
+          sh 'docker rmi jc21/${IMAGE}:latest-${ARMV7_TAG} || echo ""'
+          sh 'docker rmi jc21/${IMAGE}:latest-${ARMV6_TAG} || echo ""'
         }
       }
     }
