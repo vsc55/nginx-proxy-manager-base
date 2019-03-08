@@ -6,82 +6,149 @@ pipeline {
   agent any
   environment {
     IMAGE            = "nginx-proxy-manager-base"
-    TEMP_IMAGE       = "nginx-proxy-manager-base-build_${BUILD_NUMBER}"
-    TEMP_IMAGE_ARM   = "nginx-proxy-manager-base-arm-build_${BUILD_NUMBER}"
-    TEMP_IMAGE_ARM64 = "nginx-proxy-manager-base-arm64-build_${BUILD_NUMBER}"
-    TEMP_IMAGE_ARMV6 = "nginx-proxy-manager-base-armv6-build_${BUILD_NUMBER}"
+    TEMP_IMAGE       = "${IMAGE}-build_${BUILD_NUMBER}"
+    // Architectures:
+    AMD64_TAG        = "amd64"
+    ARMV6_TAG        = "armv6l"
+    ARMV7_TAG        = "armv7l"
+    ARM64_TAG        = "arm64"
   }
   stages {
     stage('Build') {
+      when {
+        branch 'master'
+      }
       parallel {
-        stage('x86_64') {
-          steps {
-            sh 'docker build --pull --no-cache --squash --compress -t $TEMP_IMAGE .'
-            sh 'docker tag $TEMP_IMAGE $DOCKER_PRIVATE_REGISTRY/$IMAGE:latest'
-            sh 'docker push $DOCKER_PRIVATE_REGISTRY/$IMAGE:latest'
-            sh 'docker tag $TEMP_IMAGE docker.io/jc21/$IMAGE:latest'
-
-            withCredentials([usernamePassword(credentialsId: 'jc21-dockerhub', passwordVariable: 'dpass', usernameVariable: 'duser')]) {
-              sh "docker login -u '${duser}' -p '$dpass'"
-              sh 'docker push docker.io/jc21/$IMAGE:latest'
-            }
-
-            sh 'docker rmi $TEMP_IMAGE'
-          }
-        }
-        stage('armhf') {
+        // ========================
+        // amd64
+        // ========================
+        stage('amd64') {
           agent {
-            label 'armhf'
+            label 'amd64'
           }
           steps {
-            sh 'docker build --pull --no-cache --squash --compress -f Dockerfile.armhf -t $TEMP_IMAGE_ARM .'
-            sh 'docker tag $TEMP_IMAGE_ARM $DOCKER_PRIVATE_REGISTRY/$IMAGE:armhf'
-            sh 'docker push $DOCKER_PRIVATE_REGISTRY/$IMAGE:armhf'
-            sh 'docker tag $TEMP_IMAGE_ARM docker.io/jc21/$IMAGE:armhf'
+            // Docker Build
+            sh 'docker build --pull --no-cache --squash --compress -t ${TEMP_IMAGE}-${AMD64_TAG} .'
 
+            // Dockerhub
+            sh 'docker tag ${TEMP_IMAGE}-${AMD64_TAG} docker.io/jc21/${IMAGE}:latest-${AMD64_TAG}'
             withCredentials([usernamePassword(credentialsId: 'jc21-dockerhub', passwordVariable: 'dpass', usernameVariable: 'duser')]) {
-              sh "docker login -u '${duser}' -p '$dpass'"
-              sh 'docker push docker.io/jc21/$IMAGE:armhf'
+              sh "docker login -u '${duser}' -p '${dpass}'"
+              sh 'docker push docker.io/jc21/${IMAGE}:latest-${AMD64_TAG}'
             }
 
-            sh 'docker rmi $TEMP_IMAGE_ARM'
+            sh 'docker rmi ${TEMP_IMAGE}-${AMD64_TAG}'
           }
         }
+        // ========================
+        // arm64
+        // ========================
         stage('arm64') {
           agent {
             label 'arm64'
           }
           steps {
-            sh 'docker build --pull --no-cache --squash --compress -f Dockerfile.arm64 -t $TEMP_IMAGE_ARM64 .'
-            sh 'docker tag $TEMP_IMAGE_ARM64 $DOCKER_PRIVATE_REGISTRY/$IMAGE:arm64'
-            sh 'docker push $DOCKER_PRIVATE_REGISTRY/$IMAGE:arm64'
-            sh 'docker tag $TEMP_IMAGE_ARM64 docker.io/jc21/$IMAGE:arm64'
+            // Docker Build
+            sh 'docker build --pull --no-cache --squash --compress -f Dockerfile.${ARM64_TAG} -t ${TEMP_IMAGE}-${ARM64_TAG} .'
 
+            // Dockerhub
+            sh 'docker tag ${TEMP_IMAGE}-${ARM64_TAG} docker.io/jc21/${IMAGE}:latest-${ARM64_TAG}'
             withCredentials([usernamePassword(credentialsId: 'jc21-dockerhub', passwordVariable: 'dpass', usernameVariable: 'duser')]) {
-              sh "docker login -u '${duser}' -p '$dpass'"
-              sh 'docker push docker.io/jc21/$IMAGE:arm64'
+              sh "docker login -u '${duser}' -p '${dpass}'"
+              sh 'docker push docker.io/jc21/${IMAGE}:latest-${ARM64_TAG}'
             }
 
-            sh 'docker rmi $TEMP_IMAGE_ARM64'
+            sh 'docker rmi ${TEMP_IMAGE}-${ARM64_TAG}'
           }
         }
-        stage('armv6') {
+        // ========================
+        // armv7l
+        // ========================
+        stage('armv7l') {
           agent {
-            label 'armv6'
+            label 'armv7l'
           }
           steps {
-            sh 'docker build --pull --no-cache --squash --compress -f Dockerfile.armv6 -t $TEMP_IMAGE_ARMV6 .'
-            sh 'docker tag $TEMP_IMAGE_ARMV6 $DOCKER_PRIVATE_REGISTRY/$IMAGE:armv6'
-            sh 'docker push $DOCKER_PRIVATE_REGISTRY/$IMAGE:armv6'
-            sh 'docker tag $TEMP_IMAGE_ARMV6 docker.io/jc21/$IMAGE:armv6'
+            // Docker Build
+            sh 'docker build --pull --no-cache --squash --compress -f Dockerfile.${ARMV7_TAG} -t ${TEMP_IMAGE}-${ARMV7_TAG} .'
 
+            // Dockerhub
+            sh 'docker tag ${TEMP_IMAGE}-${ARMV7_TAG} docker.io/jc21/${IMAGE}:latest-${ARMV7_TAG}'
             withCredentials([usernamePassword(credentialsId: 'jc21-dockerhub', passwordVariable: 'dpass', usernameVariable: 'duser')]) {
-              sh "docker login -u '${duser}' -p '$dpass'"
-              sh 'docker push docker.io/jc21/$IMAGE:armv6'
+              sh "docker login -u '${duser}' -p '${dpass}'"
+              sh 'docker push docker.io/jc21/${IMAGE}:latest-${ARMV7_TAG}'
             }
 
-            sh 'docker rmi $TEMP_IMAGE_ARMV6'
+            sh 'docker rmi ${TEMP_IMAGE}-${ARMV7_TAG}'
           }
+        }
+        // ========================
+        // armv6l - Disabled for the time being
+        // ========================
+        /*
+        stage('armv6l') {
+          agent {
+            label 'armv6l'
+          }
+          steps {
+            // Docker Build
+            sh 'docker build --pull --no-cache --squash --compress -f Dockerfile.armv6 -t ${TEMP_IMAGE}-${ARMV6_TAG} .'
+
+            // Dockerhub
+            sh 'docker tag ${TEMP_IMAGE}-${ARMV6_TAG} docker.io/jc21/${IMAGE}:latest-${ARMV6_TAG}'
+            withCredentials([usernamePassword(credentialsId: 'jc21-dockerhub', passwordVariable: 'dpass', usernameVariable: 'duser')]) {
+              sh "docker login -u '${duser}' -p '${dpass}'"
+              sh 'docker push docker.io/jc21/${IMAGE}:latest-${ARMV6_TAG}'
+            }
+
+            sh 'docker rmi ${TEMP_IMAGE}-${ARMV6_TAG}'
+          }
+        }
+        */
+      }
+    }
+    // ========================
+    // latest manifest
+    // ========================
+    stage('Latest Manifest') {
+      when {
+        branch 'master'
+      }
+      steps {
+        ansiColor('xterm') {
+          // =======================
+          // latest
+          // =======================
+          sh 'docker pull jc21/${IMAGE}:latest-${AMD64_TAG}'
+          sh 'docker pull jc21/${IMAGE}:latest-${ARM64_TAG}'
+          sh 'docker pull jc21/${IMAGE}:latest-${ARMV7_TAG}'
+          sh 'docker pull jc21/${IMAGE}:latest-${ARMV6_TAG}'
+
+          sh 'docker manifest push --purge jc21/${IMAGE}:latest || :'
+          sh 'docker manifest create jc21/${IMAGE}:latest jc21/${IMAGE}:latest-${AMD64_TAG} jc21/${IMAGE}:latest-${ARM64_TAG} jc21/${IMAGE}:latest-${ARMV7_TAG} jc21/${IMAGE}:latest-${ARMV6_TAG}'
+
+          sh 'docker manifest annotate jc21/${IMAGE}:latest jc21/${IMAGE}:latest-${AMD64_TAG} --arch ${AMD64_TAG}'
+          sh 'docker manifest annotate jc21/${IMAGE}:latest jc21/${IMAGE}:latest-${ARM64_TAG} --os linux --arch ${ARM64_TAG}'
+          sh 'docker manifest annotate jc21/${IMAGE}:latest jc21/${IMAGE}:latest-${ARMV7_TAG} --os linux --arch arm --variant ${ARMV7_TAG}'
+          sh 'docker manifest annotate jc21/${IMAGE}:latest jc21/${IMAGE}:latest-${ARMV6_TAG} --os linux --arch arm --variant ${ARMV6_TAG}'
+          sh 'docker manifest push --purge jc21/${IMAGE}:latest'
+        }
+      }
+    }
+    // ========================
+    // cleanup
+    // ========================
+    stage('Latest Cleanup') {
+      when {
+        branch 'master'
+      }
+      steps {
+        ansiColor('xterm') {
+          sh 'docker rmi jc21/${IMAGE}:latest'
+          sh 'docker rmi jc21/${IMAGE}:latest-${AMD64_TAG}'
+          sh 'docker rmi jc21/${IMAGE}:latest-${ARM64_TAG}'
+          sh 'docker rmi jc21/${IMAGE}:latest-${ARMV7_TAG}'
+          sh 'docker rmi jc21/${IMAGE}:latest-${ARMV6_TAG}'
         }
       }
     }
