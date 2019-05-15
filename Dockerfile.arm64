@@ -1,5 +1,5 @@
 # Nginx Build Image
-FROM balenalib/generic-aarch64-debian as nginxbuild
+FROM balenalib/generic-aarch64-debian as builder
 
 RUN apt-get update
 RUN apt-get install libpcre3-dev libssl-dev zlib1g-dev wget build-essential
@@ -52,6 +52,14 @@ RUN ./configure \
 
 RUN make
 
+# Openssl build
+WORKDIR /tmp
+RUN wget "https://www.openssl.org/source/openssl-1.1.1b.tar.gz"
+RUN tar xzf openssl-1.1.1b.tar.gz
+WORKDIR /tmp/openssl-1.1.1b
+RUN ./config
+RUN make test
+
 
 # Final Image
 FROM balenalib/generic-aarch64-debian
@@ -59,9 +67,22 @@ FROM balenalib/generic-aarch64-debian
 MAINTAINER Jamie Curnow <jc@jc21.com>
 LABEL maintainer="Jamie Curnow <jc@jc21.com>"
 
+RUN apt-get update \
+  && apt-get update \
+  && apt-get install --no-install-recommends --no-install-suggests -y build-essential \
+  && apt-get clean
+
+# Openssl custom
+COPY --from=builder /tmp/openssl-1.1.1b /tmp/openssl-1.1.1b
+WORKDIR /tmp/openssl-1.1.1b
+RUN make install \
+    && ldconfig \
+    && openssl version \
+    && rm -rf /tmp/openssl-1.1.1b
+
 # Nodejs and other packages
 RUN apt-get update \
-  && apt-get install rsync ca-certificates gnupg openssl dirmngr python make g++ git build-essential apache2-utils letsencrypt inetutils-ping \
+  && apt-get install rsync ca-certificates gnupg dirmngr python make g++ git apache2-utils letsencrypt inetutils-ping \
   && cd /tmp \
   && curl -L -o /tmp/node.tar.xz "https://nodejs.org/dist/v10.15.1/node-v10.15.1-linux-arm64.tar.xz" \
   && xz -d /tmp/node.tar.xz \
@@ -73,7 +94,7 @@ RUN apt-get update \
   && yarn config set unsafe-perm true
 
 # Copy nginx build from first image
-COPY --from=nginxbuild /tmp/nginx-1.15.12 /tmp/nginx-1.15.12
+COPY --from=builder /tmp/nginx-1.15.12 /tmp/nginx-1.15.12
 WORKDIR /tmp/nginx-1.15.12
 RUN make install \
     && rm -rf /tmp/nginx-1.15.12
